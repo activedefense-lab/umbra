@@ -1,0 +1,35 @@
+name: Tarea de sprint
+description: Una tarea del plan de sprints (una issue por tarea; una rama por issue).
+title: "[Sprint N] "
+labels: []
+body:
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: Descripción
+      description: Qué se construye o decide, con referencia a la tabla del plan de sprints.
+    validations:
+      required: true
+  - type: dropdown
+    id: lidera
+    attributes:
+      label: Lidera
+      description: Quien conduce la tarea y abre el PR; el otro revisa y prueba.
+      options:
+        - Santiago
+        - Camila
+        - Ambos
+    validations:
+      required: true
+  - type: textarea
+    id: prueba
+    attributes:
+      label: Prueba que verifica el cierre
+      description: Qué prueba (unitaria, de integración o revisión cruzada) demuestra que la tarea está hecha.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencias
+    attributes:
+      label: Dependencias
+      description: Issues que deben cerrarse antes (opcional).
