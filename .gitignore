@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+.coverage
+htmlcov/
+
+# PHP / Laravel
+vendor/
+.phpunit.result.cache
+storage/*.key
+
+# Node
+node_modules/
+
+# Docker y entorno
+.env
+.env.*
+!.env.example
+*.log
+
+# Datos y modelos locales (el dataset versionado va en docs/dataset/)
+data/
+*.sqlite
+*.pkl
+*.joblib
+
+# IDE y SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
