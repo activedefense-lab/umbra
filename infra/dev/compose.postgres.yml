@@ -1,0 +1,22 @@
+# PostgreSQL de desarrollo para el registro forense (issue #12).
+# Uso: docker compose -f infra/dev/compose.postgres.yml up -d
+# En la issue #14 este servicio se integra al docker-compose del esqueleto.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: umbra-postgres-dev
+    environment:
+      POSTGRES_USER: umbra
+      POSTGRES_PASSWORD: umbra_dev
+      POSTGRES_DB: umbra_registro
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - umbra_pg_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umbra -d umbra_registro"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+volumes:
+  umbra_pg_dev:
