@@ -28,6 +28,11 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+# El catálogo de reglas viaja dentro del paquete; sin esto una instalación
+# no editable (la del contenedor) arranca sin catálogo y falla.
+detector = ["*.json"]
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]

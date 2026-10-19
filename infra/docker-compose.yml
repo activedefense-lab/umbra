@@ -1,0 +1,51 @@
+# Umbra · Esqueleto de punta a punta (issue #14).
+#
+# Uso (desde la raíz del repositorio):
+#   infra/scripts/esqueleto.sh arriba     levanta y espera salud
+#   infra/scripts/esqueleto.sh estado     servicios y salud
+#   infra/scripts/esqueleto.sh abajo      detiene (conserva datos)
+#
+# Servicios que se añaden cuando existan:
+#   senuelo   (issue #11)  necesita Ollama del anfitrión: host.docker.internal:11434
+#   objetivo  (issue #9)   instrumentación de la aplicación objetivo
+#
+# Ollama NO va en el compose: corre en el anfitrión para usar la GPU.
+# Medido: Llama 3 8B ~35-50 tok/s con GPU frente a ~10 tok/s en CPU; esa
+# latencia delataría el señuelo.
+#
+# PostgreSQL no se publica en el anfitrión: solo lo usan los contenedores.
+# Para trabajar con registro/ desde el anfitrión, usar infra/dev/compose.postgres.yml.
+
+name: umbra
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: umbra
+      POSTGRES_PASSWORD: umbra_dev
+      POSTGRES_DB: umbra_registro
+    volumes:
+      - umbra_pg:/var/lib/postgresql/data
+      # Se ejecutan solo al crear la base por primera vez (volumen vacío).
+      - ../registro/sql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umbra -d umbra_registro"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  detector:
+    build:
+      context: ../detector
+    image: umbra/detector:dev
+    ports:
+      - "127.0.0.1:8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  umbra_pg:
