@@ -132,6 +132,5 @@ Las pruebas utilizan respuestas simuladas y no requieren que Ollama esté ejecut
 - La primera inferencia puede presentar una latencia elevada mientras Ollama carga el modelo.
 - La coherencia de las respuestas entre solicitudes no está garantizada.
 - La composición separa las instrucciones del núcleo de los datos del atacante, pero no garantiza que el modelo las respete; la resistencia frente a entradas adversariales se mide en la validación.
-- La ejecución con Docker requiere los cambios del bloque E de la issue #13 (contextos de construcción adicionales e instalación conjunta); hasta entonces la imagen no se construye.
 
 El señuelo genera texto según el contexto de simulación del complemento activo (con CWE-78, una terminal simulada). No ejecuta los comandos recibidos ni debe utilizarse como mecanismo independiente de aislamiento o contención.

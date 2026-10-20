@@ -5,8 +5,10 @@
 #   infra/scripts/esqueleto.sh estado     servicios y salud
 #   infra/scripts/esqueleto.sh abajo      detiene (conserva datos)
 #
-# Servicios que se añaden cuando existan:
-#   senuelo   (issue #11)  necesita Ollama del anfitrión: host.docker.internal:11434
+# Servicios integrados: PostgreSQL, detector y señuelo.
+# El señuelo utiliza Ollama del anfitrión: host.docker.internal:11434.
+#
+# Servicio pendiente de integración:
 #   objetivo  (issue #9)   instrumentación de la aplicación objetivo
 #
 # Ollama NO va en el compose: corre en el anfitrión para usar la GPU.
@@ -39,7 +41,12 @@ services:
   detector:
     build:
       context: ../detector
+      additional_contexts:
+        contrato: ../contrato
+        complementos: ../complementos
     image: umbra/detector:dev
+    environment:
+      UMBRA_COMPLEMENTO: cwe78
     ports:
       - "127.0.0.1:8001:8001"
     depends_on:
@@ -51,10 +58,14 @@ services:
   senuelo:
     build:
       context: ../senuelo
+      additional_contexts:
+        contrato: ../contrato
+        complementos: ../complementos
     image: umbra/senuelo:dev
     ports:
       - "127.0.0.1:8002:8002"
     environment:
+      UMBRA_COMPLEMENTO: cwe78
       OLLAMA_URL: http://host.docker.internal:11434
       OLLAMA_MODELO: llama3:latest
     extra_hosts:
