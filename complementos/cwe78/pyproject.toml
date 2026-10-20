@@ -1,0 +1,38 @@
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "umbra-complemento-cwe78"
+version = "0.1.0"
+description = "Complemento CWE-78 de Umbra (ADR-002)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Nicole Camila Niño Ariza" },
+    { name = "Noel Santiago Méndez Jaimes" },
+]
+dependencies = [
+    "umbra-contrato",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+]
+
+[project.entry-points."umbra.complementos"]
+cwe78 = "cwe78.complemento:ComplementoCWE78"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+cwe78 = ["*.json"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"
