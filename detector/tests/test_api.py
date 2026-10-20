@@ -19,7 +19,7 @@ from contrato.errores import (
     ResultadoInvalido,
 )
 from detector.api import crear_app
-from falsos import Falso, IntencionAjena, Suplantador
+from falsos import Falso, FormaCWE79, IntencionAjena, Suplantador
 
 
 PETICION = {
@@ -189,3 +189,48 @@ def test_el_detector_no_importa_complementos_concretos():
                 assert modulo.split(".")[0] not in prohibidos, (
                     f"{relativo} importa {modulo}"
                 )
+
+
+# Criterio 2: compatibilidad con un complemento de forma CWE-79
+
+
+def test_forma_cwe79_detecta_a_traves_del_contrato():
+    cliente = _cliente(FormaCWE79())
+
+    respuesta = cliente.get("/salud")
+    assert respuesta.status_code == 200
+    assert respuesta.json()["complemento"] == {
+        "nombre": "forma_cwe79",
+        "cwe": "CWE-79",
+    }
+
+    respuesta = cliente.post(
+        "/analizar",
+        json={**PETICION, "valor": "<marca>"},
+    )
+
+    assert respuesta.status_code == 200
+    cuerpo = respuesta.json()
+
+    assert cuerpo["complemento"] == "forma_cwe79"
+    assert cuerpo["es_ataque"] is True
+    assert cuerpo["intencion"] == "desfiguracion"
+
+    # La evidencia tiene la estructura definida por el complemento.
+    assert set(cuerpo["evidencia"]) == {
+        "contexto_html",
+        "etiquetas",
+    }
+
+    # El contrato HTTP no conserva campos propios de CWE-78.
+    assert not {"metacaracteres", "segmentos"} & set(cuerpo)
+
+
+def test_forma_cwe79_peticion_limpia():
+    respuesta = _cliente(FormaCWE79()).post(
+        "/analizar",
+        json={**PETICION, "valor": "texto normal"},
+    )
+
+    assert respuesta.status_code == 200
+    assert respuesta.json()["es_ataque"] is False

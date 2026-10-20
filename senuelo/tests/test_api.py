@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from contrato.cargador import GRUPO, VARIABLE_ACTIVO
 from contrato.composicion import RESTRICCIONES
 from contrato.errores import ComplementoNoEncontrado, ResultadoInvalido
-from falsos import ContextoInvalido, Falso
+from falsos import ContextoInvalido, Falso, FormaCWE79
 from senuelo.api import crear_app
 from senuelo.modelos import RespuestaSenuelo
 from senuelo.ollama import ErrorOllama
@@ -223,3 +223,66 @@ def test_el_senuelo_no_importa_complementos_concretos():
                     f"{archivo.relative_to(raiz)} "
                     f"importa {modulo}"
                 )
+
+# Criterio 2: compatibilidad con un complemento de forma CWE-79
+
+
+def test_forma_cwe79_compone_su_propia_simulacion():
+    recibidas = []
+
+    def generador(instrucciones):
+        recibidas.append(instrucciones)
+        return RESPUESTA
+
+    respuesta = _cliente(generador, FormaCWE79()).post(
+        "/generar",
+        json={
+            "complemento": "forma_cwe79",
+            "intencion": "desfiguracion",
+            "valor_normalizado": "<marca>",
+            "evidencia": {
+                "etiquetas": ["marca_ficticia"],
+            },
+        },
+    )
+
+    assert respuesta.status_code == 200
+    assert respuesta.json() == RESPUESTA.model_dump()
+
+    (instrucciones,) = recibidas
+
+    # El núcleo mantiene sus restricciones de seguridad.
+    assert instrucciones.sistema.startswith(RESTRICCIONES)
+
+    # La simulación procede del complemento CWE-79 ficticio.
+    assert "página web" in instrucciones.sistema
+
+    # La entrada del usuario no se incorpora al mensaje de sistema.
+    assert "<marca>" in instrucciones.entrada
+    assert "<marca>" not in instrucciones.sistema
+
+
+def test_una_intencion_de_cwe78_no_vale_para_forma_cwe79():
+    """Rechaza intenciones ajenas antes de consultar el contexto."""
+
+    class SinContexto(FormaCWE79):
+        def contexto_senuelo(self, solicitud):
+            raise AssertionError(
+                "contexto_senuelo no debe ejecutarse "
+                "en una solicitud rechazada"
+            )
+
+    respuesta = _cliente(
+        _no_debe_ejecutarse,
+        SinContexto(),
+    ).post(
+        "/generar",
+        json={
+            "complemento": "forma_cwe79",
+            "intencion": "reconocimiento",
+            "valor_normalizado": "x",
+        },
+    )
+
+    assert respuesta.status_code == 422
+    assert "catálogo" in respuesta.json()["detail"]
