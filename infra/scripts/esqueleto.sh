@@ -1,3 +1,4 @@
+
 #!/usr/bin/env bash
 # Umbra · arranque del esqueleto de punta a punta (issue #14).
 # Uso: infra/scripts/esqueleto.sh {arriba|estado|abajo|reiniciar-datos|logs [servicio]}
@@ -16,8 +17,15 @@ case "${1:-}" in
     "${COMPOSE[@]}" up -d --build --wait --wait-timeout 180
     "${COMPOSE[@]}" ps
     echo
+
+    echo "Verificando detector..."
     curl -fsS http://127.0.0.1:8001/salud && echo
+
+    echo "Verificando señuelo..."
+    curl -fsS http://127.0.0.1:8002/salud && echo
+
     echo "Detector: http://127.0.0.1:8001/docs"
+    echo "Señuelo:  http://127.0.0.1:8002/docs"
     ;;
   estado)
     "${COMPOSE[@]}" ps

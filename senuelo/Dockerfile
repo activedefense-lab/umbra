@@ -1,4 +1,8 @@
-# Umbra · Generador de señuelo. Contexto de construcción: senuelo/
+# Umbra · Generador de señuelo (pasos 4 y 5).
+# Núcleo independiente de CWE concretas (ADR-002).
+# Contexto principal: senuelo/
+# Contextos adicionales: contrato/ y complementos/
+
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -8,19 +12,29 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Instalar únicamente el paquete y sus dependencias de ejecución.
+# Incorporar el contrato y los complementos desde contextos independientes.
+COPY --from=contrato . /build/contrato
+COPY --from=complementos . /build/complementos
+
+# Incorporar exclusivamente los archivos necesarios del señuelo.
 COPY pyproject.toml README.md ./
 COPY src ./src
-RUN pip install . && rm -rf /app/src
 
-# Ejecutar sin privilegios de administrador.
+# Resolver conjuntamente las dependencias locales y del servicio.
+# Cada subdirectorio de complementos/ debe ser un paquete instalable.
+RUN pip install /build/contrato /build/complementos/*/ . \
+    && pip check \
+    && rm -rf /build /app/src
+
+# Ejecutar sin privilegios.
 RUN useradd --system --uid 10001 --no-create-home umbra
 USER umbra
 
 EXPOSE 8002
 
-# Comprobar la API sin depender de que Ollama esté disponible.
+# Comprobar la API sin depender de la disponibilidad de Ollama.
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=5 \
   CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8002/salud', timeout=2).status == 200 else 1)"
 
-CMD ["uvicorn", "senuelo.api:app", "--host", "0.0.0.0", "--port", "8002"]
+# Crear la aplicación al arrancar con el complemento configurado.
+CMD ["uvicorn", "--factory", "senuelo.api:crear_app", "--host", "0.0.0.0", "--port", "8002"]

@@ -1,33 +1,14 @@
-"""Contratos de entrada y salida del generador de señuelo."""
+"""Modelos propios del generador de señuelo.
 
-from enum import StrEnum
+La solicitud de entrada pertenece al contrato compartido de Umbra.
+Aquí permanece únicamente el modelo de respuesta del servicio.
+"""
 
-from typing import Annotated
-
-from pydantic import BaseModel, Field, StringConstraints
-
-
-class Intencion(StrEnum):
-    """Intenciones compatibles con el contrato del detector."""
-
-    RECONOCIMIENTO = "reconocimiento"
-    DESCARGA = "descarga_herramientas"
-    PERSISTENCIA = "persistencia"
-    EXFILTRACION = "exfiltracion"
-    MOVIMIENTO_LATERAL = "movimiento_lateral"
-    DESCONOCIDA = "desconocida"
-
-
-class SolicitudSenuelo(BaseModel):
-    """Contexto del ataque previamente analizado por el detector."""
-
-    intencion: Intencion
-    segmentos: list[Annotated[str, StringConstraints(max_length=4096)]] = Field(max_length=20)
-    valor_normalizado: str = Field(max_length=4096)
+from pydantic import BaseModel, Field
 
 
 class RespuestaSenuelo(BaseModel):
-    """Respuesta ficticia generada por Ollama."""
+    """Respuesta ficticia generada por el modelo de lenguaje."""
 
     respuesta: str
     modelo: str
