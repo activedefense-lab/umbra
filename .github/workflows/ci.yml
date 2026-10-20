@@ -38,6 +38,29 @@ jobs:
           /tmp/vdet/bin/pip install --quiet .
           cd /tmp && /tmp/vdet/bin/python -c "from detector.api import app; print('OK', app.title)"
 
+  senuelo:
+    name: senuelo · pruebas e instalación
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: senuelo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: senuelo/pyproject.toml
+      - name: Instalar (editable, con dependencias de desarrollo)
+        run: pip install -e ".[dev]"
+      - name: Pruebas unitarias
+        run: pytest
+      - name: Instalación no editable (la del contenedor) importa el paquete
+        run: |
+          python -m venv /tmp/vsen
+          /tmp/vsen/bin/pip install --quiet .
+          cd /tmp && /tmp/vsen/bin/python -c "from senuelo.api import app; print('OK', app.title)"
+
   registro:
     name: registro · pruebas contra PostgreSQL
     runs-on: ubuntu-24.04
