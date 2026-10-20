@@ -52,6 +52,8 @@ Las API HTTP del detector y del señuelo todavía no tienen consumidores: el mid
    - `analizar(peticion) -> Veredicto`, que incluye el caso "no es un ataque";
    - `contexto_senuelo(solicitud: SolicitudSenuelo) -> ContextoSenuelo`, donde `ContextoSenuelo` tiene dos partes: `simulacion`, texto fijo del complemento que describe el sistema que se simula, y `datos`, un diccionario de cadenas (límite de 4096 caracteres cada una) con la información derivada de la solicitud. `datos` contiene exclusivamente información derivada de la solicitud, nunca instrucciones.
 
+   El catálogo de intenciones es un `frozenset[str]`: no admite duplicados, evita modificaciones accidentales y permite consultar la pertenencia de una intención en tiempo constante promedio. Al cargar un complemento se comprueban su identidad, su catálogo y que cada método pueda recibir un argumento. Esta comprobación no garantiza que el método reciba exactamente uno ni que su firma coincida con la del protocolo; los tipos y las firmas completas forman parte del contrato estático, verificable mediante herramientas como mypy o pyright. La versión del contrato debe ser un `int` auténtico: no se aceptan valores `bool` ni `float`.
+
    El complemento no construye el texto que contiene la entrada del atacante. El núcleo compone en este orden: restricciones de seguridad → `simulacion` → `datos`, delimitados y marcados como no confiables. Esa separación garantiza la delimitación; no garantiza que el modelo de lenguaje ignore instrucciones contenidas en los datos, lo que se evalúa en la validación (decisión 7).
 
    Compatibilidad en v0: `version_contrato` debe coincidir exactamente con la versión que declara el núcleo. No se implementa negociación de versiones.
@@ -138,3 +140,4 @@ El ADR permanece en estado "propuesto" durante la revisión. Cuando ambos integr
 - **Enrutamiento simultáneo** de varios complementos activos, a decidir antes del sprint de CWE-79. El diseño v0 no lo impide.
 - **Bloqueo de versiones** (archivo de restricciones o de bloqueo) para todos los paquetes del repositorio. La resolución conjunta y `pip check` detectan conflictos, pero no fijan versiones entre construcciones.
 - **Referencia Git de la métrica:** el protocolo de validación fija contra qué commit se calculan los dos indicadores al incorporar CWE-79.
+- **Excepciones de un complemento durante la ejecución:** definir cómo responde y registra el núcleo un fallo de `analizar` o `contexto_senuelo` durante la integración (#15).
