@@ -1,47 +1,70 @@
 # detector/ · Guía de desarrollo
 
-Contenedor de **detección e inferencia** (pasos 2 y 3 del flujo). Versión mínima del sprint 1: reglas de metacaracteres e intención provisional por palabras clave. El sprint 5 reemplaza la puntuación por un clasificador scikit-learn sin cambiar la API ni los modelos.
+Contenedor de **detección e inferencia** (pasos 2 y 3 del flujo de Umbra). Forma parte del núcleo del sistema y no implementa reglas específicas de ninguna CWE.
+
+Delega el análisis en el complemento activo mediante el [contrato de complementos](../docs/adr/ADR-002-contrato-complementos.md) (ADR-002) y verifica cada veredicto antes de devolverlo.
+
+Según el plan de desarrollo, en el **sprint 5** se prevé reemplazar la puntuación por palabras clave de cada complemento por un clasificador scikit-learn, sin modificar el contrato establecido.
 
 ## Estructura
 
-```
+```text
 detector/
-  pyproject.toml                 Paquete umbra-detector, deps, config de pytest
+  pyproject.toml          Paquete umbra-detector; depende de umbra-contrato
   src/detector/
-    modelos.py                   Pydantic: Peticion, Veredicto, enum Intencion
-    reglas.py                    Motor genérico: normaliza, detecta, segmenta, puntúa, decide
-    catalogo_cwe78.json          Datos: metacaracteres, separadores y palabras clave por intención
-    api.py                       FastAPI: GET /salud, POST /analizar
-  tests/                         pytest: motor y API
+    api.py                FastAPI: GET /salud y POST /analizar
+  tests/
+    falsos.py             Complementos simulados para pruebas aisladas
+    test_api.py           Pruebas HTTP, validación y desacoplamiento
 ```
 
-El **motor** (`reglas.py`) no conoce ningún comando; todo lo específico de CWE-78 vive en `catalogo_cwe78.json`. En la issue #13 ese catálogo pasa al complemento `cwe78` a través del contrato de complementos.
+La lógica de detección de CWE-78, incluidos el motor y su catálogo, reside en `complementos/cwe78/`.
 
-## Importante: el catálogo está vacío a propósito
-
-Las listas de `palabras_clave` en `catalogo_cwe78.json` están **vacías**. Se llenan en el sprint 2, cuando el protocolo del conjunto de datos (`docs/dataset/protocolo.md`) fije las reglas de etiquetado por intención a partir de fuentes citables (documentación de commix, MITRE ATT&CK). Hasta entonces el detector marca `es_ataque` por metacaracteres e intención `desconocida`, que es correcto y honesto: no inventa un criterio de etiquetado sin respaldo.
+El detector carga el complemento activo mediante *entry points*, utilizando la variable de entorno `UMBRA_COMPLEMENTO`. No importa directamente ningún complemento específico.
 
 ## Entorno y pruebas
 
+La instalación se realiza desde la **raíz del repositorio**, porque `umbra-contrato` es un paquete local y no debe resolverse desde PyPI.
+
 ```bash
-cd detector
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev]"
-pytest
+pip install -e ./contrato -e ./complementos/cwe78 -e "./detector[dev]"
+(cd detector && pytest)
 ```
+
+Las pruebas de la API utilizan complementos simulados para comprobar el comportamiento del núcleo sin depender de las reglas de CWE-78.
+
+Las pruebas específicas del motor se encuentran en `complementos/cwe78/tests/`.
 
 ## Arrancar el servicio en local
 
+La variable `UMBRA_COMPLEMENTO` identifica el complemento que debe cargarse.
+
+Si no está configurada o el complemento solicitado no está instalado, la creación de la aplicación falla. Este comportamiento evita iniciar el detector sin un complemento válido.
+
 ```bash
-uvicorn detector.api:app --reload --port 8001
-# Documentación interactiva en http://127.0.0.1:8001/docs
+UMBRA_COMPLEMENTO=cwe78 uvicorn --factory detector.api:crear_app --reload --port 8001
 ```
 
-Ejemplo:
+Documentación interactiva: http://127.0.0.1:8001/docs
+
+## Ejemplo de análisis
 
 ```bash
 curl -s -X POST http://127.0.0.1:8001/analizar \
   -H 'content-type: application/json' \
   -d '{"origen":"anon","ruta":"/diagnostico/ping","parametro":"host","valor":"127.0.0.1;id"}'
 ```
+
+El endpoint `POST /analizar` recibe una `Peticion` definida por el contrato, delega su análisis en el complemento activo y devuelve un `Veredicto` validado.
+
+El endpoint `GET /salud` informa el estado del servicio, su versión, el complemento activo y los complementos instalados.
+
+## Responsabilidades
+
+El detector es responsable de cargar el complemento, exponer la API HTTP y verificar los resultados conforme al contrato.
+
+Cada complemento es responsable de su lógica de detección, sus catálogos y sus pruebas específicas.
+
+Esta separación está diseñada para incorporar nuevas categorías de vulnerabilidad sin modificar la lógica interna del detector. Su desacoplamiento se comprobará mediante un complemento ficticio en las pruebas transversales y se evaluará posteriormente al incorporar CWE-79 ([ADR-002](../docs/adr/ADR-002-contrato-complementos.md), decisión 10).
