@@ -105,3 +105,18 @@ def verificar_resultado(complemento: Complemento, veredicto: object) -> Veredict
             f"la intención {veredicto.intencion!r} no pertenece al catálogo de {complemento.nombre!r}"
         )
     return veredicto
+
+
+def verificar_contexto(
+    complemento: Complemento,
+    contexto: object,
+) -> ContextoSenuelo:
+    """Comprueba que el complemento devolvió un contexto válido."""
+
+    if not isinstance(contexto, ContextoSenuelo):
+        raise ResultadoInvalido(
+            f"{complemento.nombre!r} devolvió "
+            f"{type(contexto).__name__}, no un ContextoSenuelo"
+        )
+
+    return contexto
