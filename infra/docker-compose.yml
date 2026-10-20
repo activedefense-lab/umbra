@@ -47,5 +47,19 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+
+  senuelo:
+    build:
+      context: ../senuelo
+    image: umbra/senuelo:dev
+    ports:
+      - "127.0.0.1:8002:8002"
+    environment:
+      OLLAMA_URL: http://host.docker.internal:11434
+      OLLAMA_MODELO: llama3:latest
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
 volumes:
   umbra_pg:
