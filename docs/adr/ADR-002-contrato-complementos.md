@@ -39,6 +39,8 @@ Las API HTTP del detector y del señuelo todavía no tienen consumidores: el mid
    - `SolicitudSenuelo`: `complemento`, `intencion`, `valor_normalizado` y `evidencia`.
 
    `evidencia` es un diccionario de listas de texto, de un solo nivel, donde cada complemento registra lo que su análisis encontró. CWE-78 registra allí `metacaracteres`, `segmentos` y `coincidencias`; CWE-79 registrará lo propio sin cambiar el modelo. El campo `complemento` existe desde v0 para que el señuelo verifique que la solicitud corresponde a su complemento activo y para que un enrutamiento futuro no cambie el modelo.
+   
+   **Restricciones estructurales.** Los modelos compartidos rechazan campos desconocidos (`extra="forbid"`) y son inmutables respecto a la reasignación de atributos (`frozen=True`). Esta inmutabilidad no impide modificar las colecciones internas. Los identificadores de complemento, intención y claves de los diccionarios admiten entre 1 y 64 caracteres, comienzan por una letra minúscula y contienen únicamente letras minúsculas, dígitos y guiones bajos. Estas restricciones se verifican mediante pruebas automatizadas.
 
    **Invariantes.** Se validan en dos capas:
    - *En el modelo* (Pydantic, `model_validator`), lo que depende solo del propio veredicto: si `es_ataque` es falso, `intencion` es `desconocida`, `confianza` es `0` y `evidencia` está vacía; `confianza` está en `[0, 1]`; `evidencia` tiene a lo sumo 20 claves, 20 elementos por lista y 4096 caracteres por elemento (los mismos límites que ya usa `SolicitudSenuelo`).
