@@ -8,8 +8,11 @@
 # Servicios integrados: PostgreSQL, detector y señuelo.
 # El señuelo utiliza Ollama del anfitrión: host.docker.internal:11434.
 #
-# Servicio pendiente de integración:
-#   objetivo  (issue #9)   instrumentación de la aplicación objetivo
+# Red arya-lab (ADR-003, decisión 7): este Compose la crea y es su dueño.
+# La aplicación objetivo (lab-target, repositorio Kmilap/noctua) se une a ella
+# como red externa, por lo que este esqueleto debe levantarse primero.
+# Solo el detector se une a arya-lab: la aplicación objetivo no alcanza al
+# señuelo ni a PostgreSQL.
 #
 # Ollama NO va en el compose: corre en el anfitrión para usar la GPU.
 # Medido: Llama 3 8B ~35-50 tok/s con GPU frente a ~10 tok/s en CPU; esa
@@ -49,6 +52,9 @@ services:
       UMBRA_COMPLEMENTO: cwe78
     ports:
       - "127.0.0.1:8001:8001"
+    networks:
+      - default
+      - arya-lab
     depends_on:
       postgres:
         condition: service_healthy
@@ -74,3 +80,10 @@ services:
 
 volumes:
   umbra_pg:
+
+networks:
+  default:
+  # Nombre fijo (sin prefijo del proyecto) para que el Compose de la
+  # aplicación objetivo la declare como externa con el mismo nombre.
+  arya-lab:
+    name: arya-lab

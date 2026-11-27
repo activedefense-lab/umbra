@@ -236,6 +236,15 @@ jobs:
         run: |
           curl -fsS http://127.0.0.1:8002/salud \
             | python3 -c "import json,sys; v=json.load(sys.stdin); assert v['estado'] == 'ok', v; assert v['complemento']['nombre'] == 'cwe78', v; print('señuelo OK')"
+      - name: Red arya-lab creada y solo el detector unido (ADR-003)
+        run: |
+          miembros=$(docker network inspect arya-lab --format '{{range .Containers}}{{.Name}} {{end}}')
+          echo "arya-lab: $miembros"
+          echo "$miembros" | grep -q 'detector' || { echo "el detector no está en arya-lab"; exit 1; }
+          for s in senuelo postgres; do
+            if echo "$miembros" | grep -q "$s"; then echo "$s no debe estar en arya-lab"; exit 1; fi
+          done
+          echo "red OK"
       - name: Esquema aplicado en la base del esqueleto
         run: docker compose -f infra/docker-compose.yml exec -T postgres psql -U umbra -d umbra_registro -c '\dt'
       - name: Bajar

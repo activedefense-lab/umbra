@@ -58,5 +58,6 @@ Ambos servicios exponen en `/salud` el complemento seleccionado y los complement
 - **Ollama fuera de Docker Compose.** Se ejecuta en el anfitrión y el señuelo accede a él mediante `host.docker.internal:11434`.
 - **PostgreSQL no se publica en el anfitrión** dentro del esqueleto; se utiliza desde los contenedores.
 - **Contenedores sin privilegios.** Detector y señuelo utilizan el usuario `umbra` (UID 10001).
+- **Red `arya-lab` (ADR-003).** La crea este Compose con nombre fijo. Solo el detector se une a ella; la aplicación objetivo (`lab-target`) la usa como red externa para llegar a `http://detector:8001`. Por eso el esqueleto se levanta antes que la aplicación objetivo.
 - **Puertos locales.** Los endpoints HTTP del detector y del señuelo se publican únicamente en `127.0.0.1`.
 - **Entorno de contención.** Su implementación queda separada del esqueleto actual, conforme a la planificación y las decisiones arquitectónicas del proyecto.

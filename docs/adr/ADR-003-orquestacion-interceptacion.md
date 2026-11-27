@@ -1,6 +1,6 @@
 # ADR-003. Orquestación del flujo de interceptación: el detector como punto de entrada único
 
-- Estado: propuesto
+- Estado: aceptado (PR #25, aprobado por ambos integrantes)
 - Fecha: 2026-11-27
 - Deciden: Noel Santiago Méndez Jaimes, Nicole Camila Niño Ariza
 - Issues: #15
@@ -38,7 +38,7 @@ B acopla la aplicación objetivo a la estructura interna del framework (tres URL
 4. **Secuencia ante ataque** (`es_ataque = true`): abrir sesión → evento paso 2 `peticion_recibida` → evento paso 3 `veredicto` → `POST /generar` al señuelo → evento paso 4 `respuesta_senuelo` → cerrar sesión con la intención inferida → devolver `accion = senuelo`. Una petición legítima no abre sesión y devuelve `accion = permitir`.
 5. **Fallo cerrado.** Invariante de la máquina de estados: la petición llega a la aplicación objetivo solo si f(p) = legítima. Si el señuelo o el registro fallan, el detector responde 503 y el middleware bloquea. La decisión nunca se degrada a `permitir`.
 6. **Middleware:** `permitir` → controlador real. `senuelo` → HTTP 200 con la misma forma JSON del endpoint real (`host`, `exit_code` = 0, `output` = `respuesta`), sin exponer `sesion_id`. Cualquier error, tiempo agotado o cuerpo inválido → 503. Se elimina la respuesta 409.
-7. **Red:** red Docker externa `arya-lab`, creada por `infra/scripts/esqueleto.sh arriba`. Solo el detector se une a ella desde el framework; `lab-target` se une desde el Compose de la aplicación objetivo. El señuelo y PostgreSQL no se exponen a la aplicación objetivo.
+7. **Red:** red Docker `arya-lab`, creada por el Compose del framework (`infra/docker-compose.yml`), que es su dueño; la aplicación objetivo la declara como externa y, por tanto, el framework se levanta primero. Solo el detector se une a ella desde el framework; `lab-target` se une desde el Compose de la aplicación objetivo. El señuelo y PostgreSQL no se exponen a la aplicación objetivo.
 8. **Tiempo de espera:** 2 s no alcanzan para la generación con Ollama. `UMBRA_DETECTOR_TIMEOUT` pasa a 30 s en el laboratorio; el presupuesto de latencia se mide en el sprint 6.
 9. **Fuera de alcance:** continuidad de sesión entre peticiones (sprint 6), contención (sprints 3 y 7) e informe automático (sprint 8). En este esqueleto, una petición maliciosa equivale a una sesión.
 
