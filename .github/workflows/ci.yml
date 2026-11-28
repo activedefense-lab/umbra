@@ -1,4 +1,6 @@
 # Integración continua del framework (issues #14, #22, #13 y #15).
+# El job compose ejecuta las pruebas de integración de /interceptar contra el
+# esqueleto real con un doble de prueba de Ollama (infra/ci/).
 # Corre en cada PR y en cada push a main.
 # Verifica contrato, complementos, servicios, registro e infraestructura.
 # Los paquetes locales se instalan en una sola invocación de pip con rutas
@@ -222,6 +224,36 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: infra/pruebas/requirements.txt
+      - name: Dependencias de las pruebas de integración
+        run: python -m pip install -r infra/pruebas/requirements.txt
+      # Doble de prueba de Ollama (umbra#15, PR 3b): en el anfitrión, fuera de
+      # Compose, igual que Ollama en el laboratorio. Verifica el flujo, no la
+      # credibilidad del señuelo (infra/ci/README.md).
+      - name: Pruebas del doble de prueba de Ollama
+        run: python -m pytest infra/ci -q -p no:cacheprovider
+      - name: Arrancar el doble de prueba de Ollama en el anfitrión
+        run: |
+          nohup python infra/ci/ollama_doble.py --host 0.0.0.0 --puerto 11434 > /tmp/ollama_doble.log 2>&1 &
+          echo $! > /tmp/ollama_doble.pid
+          for i in $(seq 1 30); do
+            v=$(curl -fsS --max-time 2 http://127.0.0.1:11434/api/version) && {
+              echo "$v"
+              # Debe ser el doble y no otro proceso en el puerto.
+              echo "$v" | grep -q 'doble de prueba' && exit 0
+              echo "En el puerto 11434 responde otro servidor" >&2; exit 1
+            }
+            sleep 1
+          done
+          echo "El doble de Ollama no respondió en 30 s" >&2; cat /tmp/ollama_doble.log; exit 1
+      - name: El doble es alcanzable desde un contenedor, como lo usa el señuelo
+        run: |
+          docker run --rm --add-host=host.docker.internal:host-gateway curlimages/curl:8.11.1 \
+            -fsS --max-time 5 http://host.docker.internal:11434/api/version | tee /dev/stderr | grep -q 'doble de prueba'
       - name: Validar infra/docker-compose.yml
         run: docker compose -f infra/docker-compose.yml config --quiet
       - name: Levantar esqueleto y esperar salud
@@ -248,6 +280,27 @@ jobs:
           echo "red OK"
       - name: Esquema aplicado en la base del esqueleto
         run: docker compose -f infra/docker-compose.yml exec -T postgres psql -U umbra -d umbra_registro -c '\dt'
+      - name: Señuelo listo (calentamiento contra el doble)
+        run: |
+          for i in $(seq 1 24); do
+            c=$(curl -s -o /tmp/listo.json -w '%{http_code}' http://127.0.0.1:8002/listo)
+            [ "$c" = 200 ] && { cat /tmp/listo.json; echo; exit 0; }
+            sleep 5
+          done
+          echo "El señuelo no quedó listo en 2 min: $c" >&2; cat /tmp/listo.json; exit 1
+      - name: Pruebas de integración de /interceptar (las 7, incluidas las destructivas)
+        run: python -m pytest infra/pruebas -v
+      - name: La respuesta registrada vino del doble (no de otro servidor)
+        run: |
+          texto=$(docker compose -f infra/docker-compose.yml exec -T postgres psql -U umbra -d umbra_registro -At \
+            -c "select detalle->>'respuesta' from eventos where tipo='respuesta_senuelo' order by id desc limit 1")
+          echo "evento 4: $texto"
+          [ "$texto" = "[doble de prueba de Ollama: respuesta fija del CI]" ]
+      - name: Log del doble de Ollama y detención
+        if: always()
+        run: |
+          cat /tmp/ollama_doble.log 2>/dev/null || true
+          [ -f /tmp/ollama_doble.pid ] && kill "$(cat /tmp/ollama_doble.pid)" 2>/dev/null || true
       - name: Bajar
         if: always()
         run: docker compose -f infra/docker-compose.yml down -v
