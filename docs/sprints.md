@@ -4,7 +4,7 @@ Framework extensible de engaño y contención activa asistido por IA para la car
 Méndez Jaimes · Niño Ariza · Director: Fabián Enrique Suárez Carvajal · Codirector: Yamid Gabriel Gamba González · UNAB.
 
 Repositorio: https://github.com/activedefense-lab/umbra · Tablero: https://github.com/orgs/activedefense-lab/projects/1
-Actualizado: 2026-10-13. Sin fechas: cada sprint cierra cuando su entregable cumple el criterio de cierre.
+Actualizado: 2026-11-27. Sin fechas: cada sprint cierra cuando su entregable cumple el criterio de cierre.
 
 | # | Sprint | Criterio de cierre | Lidera | Días | Estado |
 |---|---|---|---|---|---|
@@ -24,6 +24,24 @@ Actualizado: 2026-10-13. Sin fechas: cada sprint cierra cuando su entregable cum
 | 13 | Informe final y sustentación | Documento final entregado; código publicado | Ambos | 10–12 | Por hacer |
 
 Sprints 0–3 = Fase 0 del anteproyecto (evidencia TRL 3). Sprints 4–13 = diseño, construcción y validación (TRL 4). S = Santiago (infraestructura y contención); C = Camila (inteligencia).
+
+## Sprint 1 · En curso (estado al 2026-11-27)
+
+Integrado en `main`:
+
+- PR #27 — pruebas de integración de `POST /interceptar` contra el esqueleto real (Santiago).
+- PR #28 — señuelo: tiempos de espera configurables, `keep_alive`, calentamiento al arrancar y `/listo` (preparación) separado de `/salud` (vida).
+- PR #29 — detector: `POST /interceptar` con señuelo, registro forense (eventos 2, 3 y 4) y fallo cerrado (503). Precisiones en ADR-003.
+- PR #30 — CI: el job `compose` ejecuta las 7 pruebas de integración con un doble de prueba de Ollama (`infra/ci/`).
+
+Verificado el 2026-11-27 (PR #31, `infra/punta_a_punta/`): **3 de 3** contra el entorno real — Noctúa `lab-target` → `arya-lab` → detector → señuelo con Ollama (`llama3:latest`) → registro forense → respuesta al atacante, y 503 en fallo cerrado con el señuelo detenido. El laboratorio se reprodujo en el equipo de Camila (Docker en WSL).
+
+Falta para el criterio de cierre:
+
+- **commix** como atacante (#16); hasta ahora las peticiones se hicieron con `curl`.
+- **Credibilidad del señuelo**: en la verificación, `127.0.0.1;id` recibió `$` como salida. El flujo y la evidencia son correctos; el contenido no es creíble. Se trata en #16.
+- **Informe impreso** de la sesión desde el registro forense.
+- Catálogo v0 (PR 3c, trabajo conjunto).
 
 ## Sprint 0 · Cerrado el 2026-10-13
 
