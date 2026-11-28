@@ -8,6 +8,8 @@ Infraestructura del laboratorio y del esqueleto. Lidera: Santiago. Revisa y prue
 | `docker-compose.yml` | Esqueleto integrado con PostgreSQL, detector (`127.0.0.1:8001`) y señuelo (`127.0.0.1:8002`). |
 | `scripts/esqueleto.sh` | Comandos `arriba`, `estado`, `abajo`, `logs [servicio]` y `reiniciar-datos`. |
 | `dev/compose.postgres.yml` | PostgreSQL independiente en `127.0.0.1:5433` para desarrollar `registro/` desde el anfitrión. |
+| `pruebas/` | Pruebas de integración de `/interceptar` contra el esqueleto real. |
+| `ci/` | Doble de prueba de Ollama para ejecutar esas pruebas en el CI (no sustituye las pruebas con Ollama real). |
 | `../.github/workflows/ci.yml` | Integración continua: contrato, complementos, detector, señuelo, registro y Docker Compose. |
 
 ## Uso

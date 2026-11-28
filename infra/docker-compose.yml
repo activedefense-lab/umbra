@@ -81,7 +81,9 @@ services:
       - "127.0.0.1:8002:8002"
     environment:
       UMBRA_COMPLEMENTO: cwe78
-      OLLAMA_URL: http://host.docker.internal:11434
+      # Sobrescribible para probar el CI en local con el doble de prueba de
+      # Ollama en otro puerto (infra/ci/README.md) sin tocar el Ollama real.
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
       OLLAMA_MODELO: llama3:latest
       # Cadena de tiempos (umbra#15): middleware 30 s > detector→señuelo 25 s
       # > señuelo→Ollama 20 s. El calentamiento tiene su propio límite porque

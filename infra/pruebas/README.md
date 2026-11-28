@@ -19,4 +19,4 @@ Sin las destructivas: `pytest infra/pruebas -m "not destructiva"`.
 
 ## Estado
 
-`/interceptar` está implementado en el detector (#15). Las 7 pruebas deben pasar con el esqueleto arriba y Ollama en el anfitrión. Su ejecución en el job `compose` del CI, con un doble de prueba de Ollama, llega en un PR aparte (#15, PR 3b).
+`/interceptar` está implementado en el detector (#15). Las 7 pruebas pasan con el esqueleto arriba y Ollama en el anfitrión, y el job `compose` del CI las ejecuta en cada PR con un doble de prueba de Ollama ([`../ci/`](../ci/README.md)). El doble verifica el flujo, no la credibilidad del señuelo.
