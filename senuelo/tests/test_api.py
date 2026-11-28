@@ -20,6 +20,7 @@ RESPUESTA = RespuestaSenuelo(
     respuesta="salida simulada",
     modelo="modelo-prueba",
     latencia_ms=12.5,
+    temperatura=0.3,
 )
 
 

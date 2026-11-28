@@ -8,8 +8,13 @@ from pydantic import BaseModel, Field
 
 
 class RespuestaSenuelo(BaseModel):
-    """Respuesta ficticia generada por el modelo de lenguaje."""
+    """Respuesta ficticia generada por el modelo de lenguaje.
+
+    `modelo` y `temperatura` son los parámetros realmente enviados a Ollama;
+    el registro forense los conserva para reproducir la generación.
+    """
 
     respuesta: str
     modelo: str
     latencia_ms: float = Field(ge=0)
+    temperatura: float = Field(ge=0)

@@ -35,12 +35,19 @@ UMBRA_COMPLEMENTO=cwe78 senuelo/.venv/bin/python -m uvicorn --factory senuelo.ap
 
 La API estará disponible en `http://127.0.0.1:8002`.
 
-Por defecto, el microservicio utiliza las siguientes variables de configuración:
+Variables de configuración y sus valores por defecto:
 
-- `OLLAMA_URL`: `http://127.0.0.1:11434`
-- `OLLAMA_MODELO`: `llama3:latest`
+| Variable | Defecto | Uso |
+|---|---|---|
+| `OLLAMA_URL` | `http://127.0.0.1:11434` | Dirección del servidor Ollama. |
+| `OLLAMA_MODELO` | `llama3:latest` | Modelo utilizado. |
+| `OLLAMA_TIMEOUT` | `20` | Segundos de espera de cada generación. Debe ser menor que el tiempo de espera del detector hacia el señuelo (25 s), y este menor que el del middleware (30 s). |
+| `OLLAMA_TIMEOUT_CALENTAMIENTO` | `90` | Segundos de espera del calentamiento al arrancar. Es mayor porque en frío la primera generación tarda mucho más (medido: 38 s en WSL con una RTX 4070). |
+| `OLLAMA_KEEP_ALIVE` | `30m` | Cuánto tiempo mantiene Ollama el modelo en memoria tras cada petición. Un número son segundos y `-1` es indefinido; un texto es una duración (`30m`, `2h`). Para la demostración y el experimento se usa `-1`. |
 
-Estas variables permiten modificar la dirección del servidor Ollama y el modelo utilizado.
+Los tiempos de espera y `OLLAMA_KEEP_ALIVE` se validan al arrancar: un valor inválido (por ejemplo, `OLLAMA_TIMEOUT=abc`, `0` o `nan`, u `OLLAMA_KEEP_ALIVE=incorrecto`) impide el arranque con un mensaje que nombra la variable. Una variable vacía toma su valor por defecto. `OLLAMA_URL` y `OLLAMA_MODELO` no se validan al arrancar: si son incorrectos, `/listo` lo muestra.
+
+La temperatura (`0.3`) y el máximo de tokens (`128`) son constantes de `ollama.py`. La temperatura se devuelve en cada respuesta tomada del mismo cuerpo enviado a Ollama, para que el registro forense conserve el valor realmente usado.
 
 ## Ejecución con Docker
 
@@ -70,7 +77,7 @@ Esta conexión fue comprobada en el entorno de desarrollo con WSL2 y Docker. En 
 
 ## API HTTP
 
-El microservicio dispone de dos endpoints:
+El microservicio dispone de tres endpoints:
 
 ### GET /salud
 
@@ -85,6 +92,35 @@ Ejemplo ilustrativo de respuesta (con CWE-78 activo; los metadatos dependen de l
   "complemento": {"nombre": "cwe78", "cwe": "CWE-78"},
   "instalados": [{"nombre": "cwe78", "paquete": "umbra-complemento-cwe78", "version": "0.1.0"}]
 }
+```
+
+`/salud` responde mientras el proceso esté vivo y **no consulta a Ollama**: es la comprobación de vida (*liveness*) que usa el healthcheck de Docker. Que responda 200 no significa que el señuelo pueda generar.
+
+### GET /listo
+
+Indica si el señuelo puede generar **ahora** (*readiness*). En cada llamada consulta a Ollama qué modelos tiene cargados (`GET /api/ps`, máximo 2 s); no genera texto ni carga el modelo.
+
+| Situación | Código | `motivo` |
+|---|---|---|
+| Ollama responde y el modelo está en memoria | 200 | — |
+| Calentamiento inicial en curso | 503 | `calentamiento en curso` |
+| Ollama no responde | 503 | `Ollama no disponible` |
+| El modelo no está en memoria (p. ej. venció `keep_alive`) | 503 | `modelo no cargado en memoria` |
+
+El cuerpo incluye además `modelo` y el estado del calentamiento (`pendiente`, `en_curso`, `completado` o `fallido`, con su detalle). Es la comprobación que se ejecuta antes de una demostración:
+
+```bash
+curl -s http://127.0.0.1:8002/listo
+```
+
+### Calentamiento al arrancar
+
+Al iniciar, el señuelo lanza en segundo plano una generación mínima (un token) para cargar el modelo e inicializar la GPU. Se considera exitosa cuando Ollama responde con `"done": true`. Cargarlo no basta: en frío también la primera evaluación es lenta. El calentamiento **nunca bloquea ni impide el arranque**: si Ollama no está disponible, el resultado queda en el log (`docker compose logs senuelo`) y en `/listo`, y `/generar` responde 503 hasta que Ollama vuelva.
+
+Para recuperar la disponibilidad (calentamiento fallido o modelo descargado), reiniciar el servicio repite el calentamiento:
+
+```bash
+docker compose -f infra/docker-compose.yml restart senuelo
 ```
 
 ### POST /generar
@@ -104,6 +140,7 @@ La respuesta incluye:
 - `respuesta`: texto generado por el modelo.
 - `modelo`: modelo de Ollama utilizado.
 - `latencia_ms`: tiempo de generación en milisegundos.
+- `temperatura`: temperatura enviada a Ollama en esta generación.
 
 Respuestas de error:
 
@@ -118,10 +155,11 @@ Desde la raíz del repositorio, ejecutar:
 senuelo/.venv/bin/python -m pytest senuelo/tests/ -v
 ```
 
-La suite contiene diecisiete pruebas automatizadas:
+La suite contiene 64 casos de prueba:
 
-- Doce pruebas de la API FastAPI con un complemento falso: salud, composición de las instrucciones, errores 422 y 503, verificación del contexto, arranque obligatorio con `UMBRA_COMPLEMENTO` y comprobación de que el señuelo no importa complementos concretos.
-- Cinco pruebas del cliente Ollama, que verifican que transporta las instrucciones compuestas sin modificarlas.
+- `test_api.py` (14): API con un complemento falso: salud, composición de las instrucciones, errores 422 y 503, verificación del contexto, arranque obligatorio con `UMBRA_COMPLEMENTO` y comprobación de que el señuelo no importa complementos concretos.
+- `test_ollama.py` (41): cliente de Ollama: transporte de las instrucciones, errores controlados, `keep_alive` (incluido `-1` como número y el rechazo de duraciones inválidas), temperatura registrada igual a la enviada, tiempos de espera independientes de generación, calentamiento y consulta, configuración inválida (incluidos `nan` e infinito), calentamiento exitoso aunque el token generado no tenga texto (pero solo si Ollama declara `done: true`) y consulta de modelos cargados.
+- `test_disponibilidad.py` (9): `/salud` no depende de Ollama; el calentamiento no bloquea el arranque y no impide arrancar sin Ollama; `/listo` en cada situación, incluido el modelo descargado después de un calentamiento exitoso.
 
 Las pruebas utilizan respuestas simuladas y no requieren que Ollama esté ejecutándose.
 
@@ -129,7 +167,8 @@ Las pruebas utilizan respuestas simuladas y no requieren que Ollama esté ejecut
 
 - El señuelo no conserva el estado entre solicitudes.
 - No dispone todavía de caché ni plantillas específicas por intención.
-- La primera inferencia puede presentar una latencia elevada mientras Ollama carga el modelo.
+- Si el modelo se descarga de memoria (vence `keep_alive`), la siguiente generación vuelve a pagar el arranque en frío y puede superar `OLLAMA_TIMEOUT`. `/listo` lo detecta; para la demostración y el experimento se usa `OLLAMA_KEEP_ALIVE=-1`.
+- Los tiempos de espera son valores iniciales de configuración; el presupuesto de latencia se mide en el sprint 6. Además, el tiempo de espera de `httpx` limita cada operación (conexión, envío, lectura), no la duración total de extremo a extremo. Como la generación no usa *streaming*, Ollama solo responde al terminar y el límite de lectura acota en la práctica la generación, pero la cadena 30 > 25 > 20 s es un presupuesto inicial, no una garantía demostrada.
 - La coherencia de las respuestas entre solicitudes no está garantizada.
 - La composición separa las instrucciones del núcleo de los datos del atacante, pero no garantiza que el modelo las respete; la resistencia frente a entradas adversariales se mide en la validación.
 
