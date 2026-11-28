@@ -11,8 +11,8 @@ forense, no detalles internos del detector:
       `sesion_id`, y `output` igual al texto del evento 4 de SU sesión;
   (c) señuelo detenido → 503, con la sesión registrada como `error_senuelo`.
 
-ESTADO: preparadas, todavía no ejecutadas contra lab-target. La primera
-ejecución es la verificación conjunta del paso 5 (Santiago y Camila).
+ESTADO: verificadas contra el entorno real el 2026-11-27 (3 de 3, Ollama real).
+Verifican el flujo y la evidencia, no la credibilidad del señuelo (#16).
 
 Requieren los dos repositorios: el esqueleto de umbra arriba y `lab-target`
 de Kmilap/noctua corriendo. Por eso viven fuera de `infra/pruebas/` y del CI.
@@ -34,6 +34,7 @@ import os
 import secrets
 import subprocess
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -123,16 +124,32 @@ def carga_unica() -> str:
     return f"127.0.0.1;id #{secrets.token_hex(8)}"
 
 
-def esperar_listo() -> None:
-    for _ in range(24):
+CARGAR_MODELO = ("curl -s http://127.0.0.1:11434/api/generate "
+                 "-d '{\"model\":\"llama3:latest\",\"prompt\":\"\",\"keep_alive\":\"30m\"}'")
+
+
+def estado_senuelo() -> tuple[int, str]:
+    """(código HTTP de /listo, motivo); (0, error) si el señuelo no responde."""
+    try:
+        with urllib.request.urlopen(f"{SENUELO}/listo", timeout=5) as r:
+            return r.status, ""
+    except urllib.error.HTTPError as error:
         try:
-            with urllib.request.urlopen(f"{SENUELO}/listo", timeout=5) as r:
-                if r.status == 200:
-                    return
-        except OSError:
-            pass
+            motivo = json.loads(error.read()).get("motivo", "")
+        except ValueError:
+            motivo = ""
+        return error.code, motivo
+    except OSError as error:
+        return 0, str(error)
+
+
+def esperar_listo() -> None:
+    """Espera a /listo mientras el señuelo arranca o calienta (hasta 2 minutos)."""
+    for _ in range(24):
+        if estado_senuelo()[0] == 200:
+            return
         time.sleep(5)
-    raise AssertionError("el señuelo no quedó listo tras restaurarlo")
+    raise AssertionError("el señuelo no quedó listo en 2 minutos")
 
 
 # --------------------------------------------------------------------- entorno
@@ -160,7 +177,16 @@ def entorno_completo() -> None:
     if sonda.estado == 0:
         pytest.exit(f"No se pudo hacer la petición dentro de {LAB_TARGET}", returncode=2)
 
-    esperar_listo()
+    # El señuelo debe estar listo ANTES de empezar. Si Ollama descargó el modelo
+    # (keep_alive vencido), /listo da 503 y no se recupera solo: se avisa al
+    # momento, con la orden que lo resuelve, en vez de esperar y fallar después.
+    codigo, motivo = estado_senuelo()
+    if "calentamiento" in motivo:  # recién arrancado: el calentamiento carga el modelo solo
+        esperar_listo()
+        codigo, motivo = estado_senuelo()
+    if codigo != 200:
+        ayuda = f" Cárgalo con: {CARGAR_MODELO}" if "no cargado" in motivo else ""
+        pytest.exit(f"El señuelo no está listo (HTTP {codigo}: {motivo}).{ayuda}", returncode=2)
 
 
 # ---------------------------------------------------------------------- pruebas
