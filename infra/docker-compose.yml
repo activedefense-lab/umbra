@@ -74,6 +74,13 @@ services:
       UMBRA_COMPLEMENTO: cwe78
       OLLAMA_URL: http://host.docker.internal:11434
       OLLAMA_MODELO: llama3:latest
+      # Cadena de tiempos (umbra#15): middleware 30 s > detector→señuelo 25 s
+      # > señuelo→Ollama 20 s. El calentamiento tiene su propio límite porque
+      # en frío se midieron 38 s. Para la demo y el experimento:
+      #   OLLAMA_KEEP_ALIVE=-1 infra/scripts/esqueleto.sh arriba
+      OLLAMA_TIMEOUT: ${OLLAMA_TIMEOUT:-20}
+      OLLAMA_TIMEOUT_CALENTAMIENTO: ${OLLAMA_TIMEOUT_CALENTAMIENTO:-90}
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-30m}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
