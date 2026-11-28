@@ -10,6 +10,7 @@ Infraestructura del laboratorio y del esqueleto. Lidera: Santiago. Revisa y prue
 | `dev/compose.postgres.yml` | PostgreSQL independiente en `127.0.0.1:5433` para desarrollar `registro/` desde el anfitrión. |
 | `pruebas/` | Pruebas de integración de `/interceptar` contra el esqueleto real. |
 | `ci/` | Doble de prueba de Ollama para ejecutar esas pruebas en el CI (no sustituye las pruebas con Ollama real). |
+| `punta_a_punta/` | Pruebas cruzadas del middleware a través de `lab-target` (requieren también `Kmilap/noctua`; fuera del CI). Preparadas para el paso 5 de #15. |
 | `../.github/workflows/ci.yml` | Integración continua: contrato, complementos, detector, señuelo, registro y Docker Compose. |
 
 ## Uso
