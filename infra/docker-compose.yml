@@ -47,9 +47,16 @@ services:
       additional_contexts:
         contrato: ../contrato
         complementos: ../complementos
+        registro: ../registro
     image: umbra/detector:dev
     environment:
       UMBRA_COMPLEMENTO: cwe78
+      # POST /interceptar (ADR-003): el detector pide la respuesta al señuelo y
+      # escribe la sesión forense. 25 s: menor que el middleware (30 s) y mayor
+      # que el señuelo hacia Ollama (20 s).
+      UMBRA_SENUELO_URL: http://senuelo:8002
+      UMBRA_SENUELO_TIMEOUT: ${UMBRA_SENUELO_TIMEOUT:-25}
+      UMBRA_REGISTRO_DSN: postgresql://umbra:umbra_dev@postgres:5432/umbra_registro
     ports:
       - "127.0.0.1:8001:8001"
     networks:
@@ -57,6 +64,8 @@ services:
       - arya-lab
     depends_on:
       postgres:
+        condition: service_healthy
+      senuelo:
         condition: service_healthy
     restart: unless-stopped
 

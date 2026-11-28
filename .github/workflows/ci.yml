@@ -1,4 +1,4 @@
-# Integración continua del framework (issues #14, #22 y #13).
+# Integración continua del framework (issues #14, #22, #13 y #15).
 # Corre en cada PR y en cada push a main.
 # Verifica contrato, complementos, servicios, registro e infraestructura.
 # Los paquetes locales se instalan en una sola invocación de pip con rutas
@@ -110,14 +110,15 @@ jobs:
           cache-dependency-path: |
             contrato/pyproject.toml
             complementos/*/pyproject.toml
+            registro/pyproject.toml
             detector/pyproject.toml
-      - name: Instalar contrato, complementos y detector
+      - name: Instalar contrato, complementos, registro y detector
         run: |
           set -euo pipefail
           shopt -s nullglob
           directorios=(../complementos/*/)
           (( ${#directorios[@]} )) || { echo "complementos/ no contiene ningún complemento" >&2; exit 1; }
-          args=(-e ../contrato)
+          args=(-e ../contrato -e ../registro)
           for d in "${directorios[@]}"; do args+=(-e "${d%/}"); done
           pip install "${args[@]}" -e ".[dev]"
           pip check
@@ -126,7 +127,7 @@ jobs:
       - name: Instalación no editable y arranque de aplicación
         run: |
           set -euo pipefail
-          args=(../contrato)
+          args=(../contrato ../registro)
           for d in ../complementos/*/; do args+=("${d%/}"); done
           python -m venv /tmp/vdet
           /tmp/vdet/bin/pip install --quiet "${args[@]}" .

@@ -19,4 +19,4 @@ Sin las destructivas: `pytest infra/pruebas -m "not destructiva"`.
 
 ## Estado
 
-Hasta que el detector implemente `/interceptar`, solo pasa `test_analizar_se_conserva_sin_cambios`; el resto falla con 404. El PR del detector se da por terminado cuando todas pasan, y ese mismo PR las incorpora al job `compose` del CI.
+`/interceptar` está implementado en el detector (#15). Las 7 pruebas deben pasar con el esqueleto arriba y Ollama en el anfitrión. Su ejecución en el job `compose` del CI, con un doble de prueba de Ollama, llega en un PR aparte (#15, PR 3b).
