@@ -1,7 +1,8 @@
 # Umbra · Detector (pasos 2 y 3).
-# Nucleo independiente de CWE concretas (ADR-002).
+# Núcleo independiente de CWE concretas (ADR-002).
 # Contexto principal: detector/
-# Contextos adicionales: contrato/ y complementos/
+# Contextos adicionales: contrato/, complementos/ y registro/ (ADR-003:
+# /interceptar escribe la sesión forense).
 
 FROM python:3.12-slim
 
@@ -15,6 +16,7 @@ WORKDIR /app
 # Incorporar el contrato y los complementos desde contextos independientes.
 COPY --from=contrato . /build/contrato
 COPY --from=complementos . /build/complementos
+COPY --from=registro . /build/registro
 
 # Incorporar exclusivamente los archivos necesarios del detector.
 COPY pyproject.toml README.md ./
@@ -22,7 +24,7 @@ COPY src ./src
 
 # Resolver conjuntamente las dependencias locales y del servicio.
 # Cada subdirectorio de complementos/ debe ser un paquete instalable.
-RUN pip install /build/contrato /build/complementos/*/ . \
+RUN pip install /build/contrato /build/complementos/*/ /build/registro . \
     && pip check \
     && rm -rf /build /app/src
 

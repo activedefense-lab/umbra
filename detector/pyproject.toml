@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "umbra-detector"
 version = "0.1.0"
-description = "Umbra · contenedor de detección e inferencia de intención (pasos 2 y 3 del flujo)"
+description = "Umbra · contenedor de detección e inferencia de intención (pasos 2 y 3 del flujo) y punto de entrada /interceptar"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "Apache-2.0" }
@@ -18,7 +18,9 @@ dependencies = [
   "fastapi>=0.115",
   "pydantic>=2",
   "uvicorn[standard]>=0.30",
+  "httpx>=0.27",
   "umbra-contrato",
+  "umbra-registro",
 ]
 
 [project.optional-dependencies]
